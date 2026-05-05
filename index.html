@@ -1,0 +1,1396 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sklady Bobriakov</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#2F4F2F" />
+  <style>
+    .hidden { display: none; }
+    .section-title { text-align: center; margin: 0 0 24px; font-size: clamp(2rem, 4vw, 3.2rem); }
+    .page-grid { display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+    .product-card { background: white; border-radius: 24px; padding: 18px; box-shadow: 0 14px 28px rgba(15, 55, 104, 0.08); cursor: pointer; }
+    .product-card img { width: 100%; border-radius: 18px; height: 180px; object-fit: cover; margin-bottom: 14px; cursor: pointer; }
+    .product-card h3 { margin: 0 0 10px; font-size: 1.2rem; }
+    .product-card p { margin: 0 0 10px; color: #4f586f; line-height: 1.5; }
+    .product-card .status { color: #0d4f7a; font-weight: 700; }
+    .page-footer { display: flex; justify-content: center; padding: 20px 0; }
+    .link-button { background: transparent; border: none; color: #0d4f7a; font-size: 1rem; cursor: pointer; text-decoration: underline; }
+    .back-button { background: transparent; border: none; color: #0d4f7a; font-size: 1rem; cursor: pointer; margin-bottom: 16px; }
+    .page-actions { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+    .review-box { display: grid; gap: 14px; max-width: 720px; margin: 0 auto; }
+    .review-box textarea { width: 100%; min-height: 140px; border-radius: 16px; border: 1px solid #d8e1ef; padding: 14px; font-size: 1rem; resize: vertical; }
+    .review-box button { justify-self: center; background: #0d4f7a; color: white; border: none; border-radius: 16px; padding: 12px 22px; cursor: pointer; }
+    .home-center { display: flex; flex-direction: column; align-items: center; gap: 20px; }
+    .home-actions { display: flex; gap: 16px; }
+    .action-button { background: #e7f0ff; color: #0f4d86; border: 2px solid #dbe4ef; border-radius: 20px; padding: 12px 20px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease; }
+    .action-button:hover { background: #dbe4ef; border-color: #0f4d86; }
+    .product-form { width: 100%; overflow-x: auto; margin-bottom: 24px; }
+    .product-form table { width: 100%; border-collapse: collapse; }
+    .product-form th,
+    .product-form td { border: 1px solid #d8e1ef; padding: 12px 14px; }
+    .product-form th { background: #f4f7fc; text-align: left; color: #385173; }
+    .product-form-vertical { display: flex; flex-direction: column; gap: 16px; max-width: 500px; margin: 0 auto; }
+    .form-group { display: flex; flex-direction: column; gap: 8px; }
+    .form-group label { font-weight: 600; color: #385173; }
+    .form-group textarea { min-height: 80px; border: 1px solid #cfd9e7; border-radius: 12px; padding: 10px 12px; resize: vertical; }
+    .product-form-vertical button { align-self: flex-start; background: #0d4f7a; color: white; border: none; border-radius: 14px; padding: 12px 24px; cursor: pointer; font-size: 1rem; }
+    .success-message { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; border-radius: 12px; padding: 12px 16px; margin-bottom: 16px; display: none; }
+    .filters-section { display: flex; gap: 12px; align-items: center; margin-bottom: 20px; flex-wrap: wrap; }
+    .filters-section select, .filters-section input { border: 1px solid #d8e1ef; border-radius: 12px; padding: 8px 12px; }
+    .filters-section button { background: #0d4f7a; color: white; border: none; border-radius: 12px; padding: 8px 16px; cursor: pointer; }
+    .search-section { margin-bottom: 20px; }
+    .search-section input { width: 100%; max-width: 400px; border: 1px solid #d8e1ef; border-radius: 12px; padding: 10px 14px; font-size: 1rem; }
+
+    .product-card { position: relative; }
+    .delete-btn { background: #dc3545; color: white; border: none; border-radius: 12px; padding: 8px 16px; cursor: pointer; margin-top: 12px; }
+    .loading { display: inline-block; width: 20px; height: 20px; border: 3px solid #f3f3f3; border-top: 3px solid #0d4f7a; border-radius: 50%; animation: spin 1s linear infinite; margin-left: 10px; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    /* Toast notifikace */
+    .toast-container {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .toast {
+      background: #333;
+      color: white;
+      padding: 12px 20px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      animation: slideInRight 0.3s ease-out;
+      max-width: 300px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .toast.success { background: #28a745; }
+    .toast.error { background: #dc3545; }
+    .toast.info { background: #17a2b8; }
+    .toast .close-btn {
+      background: none;
+      border: none;
+      color: white;
+      font-size: 18px;
+      cursor: pointer;
+      margin-left: auto;
+    }
+    @keyframes slideInRight {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+
+    /* Dark mode */
+    body.dark-mode {
+      background: #1a1a1a;
+      color: #e0e0e0;
+    }
+    body.dark-mode .home-screen {
+      background: linear-gradient(135deg, #2d4a3e 0%, #3d5a4a 25%, #4d6a5a 50%, #5d7a6a 75%, #6d8a7a 100%);
+    }
+    body.dark-mode .product-card {
+      background: #2a2a2a;
+      color: #e0e0e0;
+    }
+    body.dark-mode .action-button {
+      background: #3a3a3a;
+      color: #e0e0e0;
+      border-color: #555;
+    }
+    body.dark-mode .action-button:hover {
+      background: #555;
+    }
+    body.dark-mode header .back-button {
+      background: linear-gradient(145deg, #2a2a2a, #3a3a3a);
+      border-color: #666;
+      color: #e0e0e0;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+    body.dark-mode header .back-button:hover {
+      background: linear-gradient(145deg, #3a3a3a, #2a2a2a);
+      border-color: #888;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    }
+
+    /* Statistiky */
+    .stats-section {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 20px;
+      margin: 30px 0;
+      text-align: center;
+    }
+    .stat-card {
+      background: rgba(255,255,255,0.9);
+      padding: 20px;
+      border-radius: 16px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .stat-number {
+      font-size: 2rem;
+      font-weight: bold;
+      color: #2F4F2F;
+      display: block;
+    }
+    .stat-label {
+      font-size: 0.9rem;
+      color: #8B4513;
+      margin-top: 5px;
+    }
+
+    /* Komentáře */
+    .comments-section {
+      margin-top: 30px;
+      padding-top: 20px;
+      border-top: 1px solid #eee;
+    }
+    .comment {
+      background: #f8f9fa;
+      padding: 15px;
+      border-radius: 12px;
+      margin-bottom: 10px;
+    }
+    .comment-author {
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+    .comment-text {
+      margin: 0;
+      line-height: 1.5;
+    }
+    .review-item {
+      background: #f8f9fa;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 12px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      border: 1px solid #e9ecef;
+    }
+    .review-item:hover {
+      background: #e9ecef;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .review-item.expanded {
+      background: white;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+    }
+    .review-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-weight: 600;
+      color: #2F4F2F;
+    }
+    .review-date {
+      font-size: 0.9rem;
+      color: #6c757d;
+      font-weight: normal;
+    }
+    .review-preview {
+      margin-top: 8px;
+      color: #495057;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .review-full {
+      margin-top: 12px;
+      color: #495057;
+      line-height: 1.6;
+      display: none;
+    }
+    .review-item.expanded .review-full {
+      display: block;
+    }
+    .review-item.expanded .review-preview {
+      display: none;
+    }
+    .review-rating {
+      color: #ffc107;
+      font-size: 1.1rem;
+    }
+    .no-reviews {
+      text-align: center;
+      color: #6c757d;
+      padding: 40px;
+      font-style: italic;
+    }
+    .add-comment {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 20px;
+    }
+    .add-comment textarea {
+      min-height: 80px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 10px;
+      resize: vertical;
+    }
+    .add-comment button {
+      align-self: flex-start;
+      background: #2F4F2F;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    /* Edit button */
+    .edit-btn {
+      background: #ffc107;
+      color: #212529;
+      border: none;
+      border-radius: 8px;
+      padding: 6px 12px;
+      cursor: pointer;
+      margin-right: 8px;
+      font-size: 0.9rem;
+    }
+
+    /* Price range filter */
+    .price-range {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    .price-range input {
+      width: 80px;
+      border: 1px solid #d8e1ef;
+      border-radius: 8px;
+      padding: 6px 8px;
+    }
+
+
+
+    /* Dark mode toggle */
+    .dark-mode-toggle {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      background: rgba(255,255,255,0.9);
+      border: none;
+      border-radius: 50%;
+      width: 50px;
+      height: 50px;
+      cursor: pointer;
+      font-size: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      z-index: 100;
+    }
+    /* Tlačítko zpět nahoru */
+    .scroll-to-top {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: #2F4F2F;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 50px;
+      height: 50px;
+      cursor: pointer;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      z-index: 1000;
+    }
+    .scroll-to-top.visible {
+      opacity: 1;
+      visibility: visible;
+    }
+    .scroll-to-top:hover {
+      background: #1a3a1a;
+      transform: translateY(-2px);
+    }
+
+    /* Lazy loading animace */
+    .product-card img {
+      transition: opacity 0.3s ease;
+    }
+    .product-card img.loading {
+      opacity: 0.5;
+      filter: blur(2px);
+    }
+    .product-card img.loaded {
+      opacity: 1;
+      filter: blur(0);
+    }
+
+    /* Loading skeleton */
+    .skeleton {
+      background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+      background-size: 200% 100%;
+      animation: loading 1.5s infinite;
+    }
+    @keyframes loading {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+    .product-card.skeleton-card {
+      pointer-events: none;
+    }
+    .product-card.skeleton-card img {
+      background: #f0f0f0;
+      height: 180px;
+    }
+    .product-card.skeleton-card h3 {
+      height: 20px;
+      margin-bottom: 10px;
+      border-radius: 4px;
+    }
+    .product-card.skeleton-card p {
+      height: 16px;
+      margin-bottom: 8px;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="page" id="app">
+    <!-- Dark mode toggle -->
+    <button class="dark-mode-toggle" id="dark-mode-toggle">🌙</button>
+
+    <!-- Toast container -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <!-- Tlačítko zpět nahoru -->
+    <button class="scroll-to-top" id="scroll-to-top" title="Zpět nahoru">↑</button>
+
+    <main class="home-screen" id="home-page">
+      <button class="button-card home-side" data-page="sell">Chci prodat</button>
+      <div class="home-center">
+        <h1 class="home-title">Sklady Bobriakov</h1>
+        <p class="home-subtitle">Online bazar pro použité věci, hračky a 3D tisk. Nakupuj a prodávej s důvěrou!</p>
+
+        <!-- Statistiky -->
+        <div class="stats-section">
+          <div class="stat-card">
+            <span class="stat-number" id="total-products">0</span>
+            <div class="stat-label">Produktů</div>
+          </div>
+              <div class="stat-card">
+            <span class="stat-number" id="total-reviews">0</span>
+            <div class="stat-label">Recenzí</div>
+          </div>
+        </div>
+
+        <div class="home-actions">
+        </div>
+      </div>
+      <button class="button-card home-side" data-page="buy">Chci koupit</button>
+      <div class="paw-print-1"></div>
+      <div class="paw-print-2"></div>
+      <div class="beaver-icon"></div>
+    </main>
+
+    <section class="page-section hidden" id="buy-page">
+      <header>
+      </header>
+      <h2 class="section-title">Chci koupit</h2>
+      <button class="back-button" data-page="home">← Zpět</button>
+
+      <!-- Hledání a filtry -->
+      <div class="search-section">
+        <input type="text" id="search-input" placeholder="Hledat produkty..." />
+        <input type="text" id="global-search-input" placeholder="Globální vyhledávání (všech kategorií)..." style="margin-left: 10px; max-width: 300px;" />
+      </div>
+      <div class="filters-section">
+        <select id="filter-condition">
+          <option value="">Všechny stavy</option>
+          <option value="Nové">Nové</option>
+          <option value="Velmi dobrý">Velmi dobrý</option>
+          <option value="Dobrý">Dobrý</option>
+          <option value="Použité">Použité</option>
+        </select>
+        <select id="sort-price">
+          <option value="">Řadit podle ceny</option>
+          <option value="asc">Cena: nízká-vysoká</option>
+          <option value="desc">Cena: vysoká-nízká</option>
+        </select>
+        <div class="price-range">
+          <span>Cena:</span>
+          <input type="number" id="min-price" placeholder="od" min="0" />
+          <span>-</span>
+          <input type="number" id="max-price" placeholder="do" min="0" />
+        </div>
+        <button id="apply-filters">Filtrovat</button>
+      </div>
+
+      <!-- Zobrazení produktů -->
+      <div id="buy-products" class="product-card-grid"></div>
+      <p id="buy-empty-message" class="product-list-empty">Zatím nejsou přidány žádné produkty.</p>
+
+      <footer class="page-footer">
+        <button class="link-button" data-page="contact">Kontaktovat</button>
+      </footer>
+    </section>
+
+    <section class="page-section hidden" id="sell-page">
+      <header>
+      </header>
+      <h2 class="section-title">Chci prodat</h2>
+      <button class="back-button" data-page="home">← Zpět</button>
+      <p style="text-align:center; max-width: 720px; margin: 0 auto 24px;">
+        Sem můžeš napsat detaily o předmětu, který chceš prodat. Popiš stav, cenu a další informace.
+      </p>
+      <div id="success-message" class="success-message">Produkt byl úspěšně přidán!</div>
+      <div class="product-table-section">
+        <form id="add-product-form" class="product-form-vertical">
+            <div class="form-group">
+            <label for="product-name">Název:</label>
+            <input id="product-name" type="text" placeholder="Např. LEGO set" required />
+          </div>
+          <div class="form-group">
+            <label for="product-image">Obrázek:</label>
+            <input id="product-image" type="file" accept="image/*" />
+          </div>
+          <div class="form-group">
+            <label for="product-description">Popis:</label>
+            <textarea id="product-description" placeholder="Krátký popis" required></textarea>
+          </div>
+          <div class="form-group">
+            <label for="product-price">Cena (Kč):</label>
+            <input id="product-price" type="number" placeholder="Cena" min="0" required />
+          </div>
+          <div class="form-group">
+            <label for="product-condition">Stav:</label>
+            <select id="product-condition" required>
+              <option value="">Vyber stav</option>
+              <option value="Nové">Nové</option>
+              <option value="Velmi dobrý">Velmi dobrý</option>
+              <option value="Dobrý">Dobrý</option>
+              <option value="Použité">Použité</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="product-contact">Kontakt (email nebo číslo):</label>
+            <input id="product-contact" type="text" placeholder="Email nebo číslo" required />
+          </div>
+          <button type="submit">Přidat produkt</button>
+        </form>
+      </div>
+      <footer class="page-footer">
+        <button class="link-button" data-page="contact">Kontaktovat</button>
+      </footer>
+    </section>
+
+    <section class="page-section hidden" id="contact-page">
+      <header>
+      </header>
+      <h2 class="section-title">Recenze</h2>
+      <button class="back-button" data-page="home">← Zpět</button>
+      <p style="text-align:center; max-width: 720px; margin: 0 auto 24px;">
+        Napiš vlastní veřejnou recenzi. Po kliknutí na tlačítko se ukáže formulář pro nový příspěvek.
+      </p>
+
+      <!-- Zobrazení recenzí -->
+      <div style="text-align: center; margin-bottom: 20px;">
+        <button id="show-all-reviews" class="action-button" style="margin-right: 10px;">Všechny recenze</button>
+        <button id="show-my-reviews" class="action-button">Moje recenze</button>
+      </div>
+      <div id="reviews-list" class="reviews-container"></div>
+
+      <!-- Formulář pro přidání recenze -->
+      <div class="review-box">
+        <div style="margin-bottom: 15px;">
+          <label style="display: block; margin-bottom: 5px; font-weight: 600;">Hodnocení:</label>
+          <div id="rating-stars" style="font-size: 1.5rem; cursor: pointer;">
+            <span class="star" data-rating="1">☆</span>
+            <span class="star" data-rating="2">☆</span>
+            <span class="star" data-rating="3">☆</span>
+            <span class="star" data-rating="4">☆</span>
+            <span class="star" data-rating="5">☆</span>
+          </div>
+        </div>
+        <textarea placeholder="Napiš recenzi..." id="review-text"></textarea>
+        <button type="button" id="add-review-btn">Napsat recenzi</button>
+      </div>
+
+      <footer class="page-footer">
+        <button class="link-button" data-page="home">Domů</button>
+      </footer>
+    </section>
+
+    <section class="page-section hidden" id="product-detail-page">
+      <header>
+      </header>
+      <button class="back-button" data-page="buy">← Zpět</button>
+      <div class="product-detail" id="product-detail-content"></div>
+
+      <!-- Komentáře -->
+      <div class="comments-section">
+        <h3>Komentáře</h3>
+        <div id="comments-list"></div>
+        <div class="add-comment">
+          <textarea placeholder="Přidat komentář..." id="comment-text"></textarea>
+          <button id="add-comment-btn">Přidat komentář</button>
+        </div>
+      </div>
+
+      <footer class="page-footer">
+        <button class="link-button" data-page="contact">Kontaktovat</button>
+      </footer>
+    </section>
+
+  </div>
+
+  <script>
+    const pages = {
+      home: document.getElementById('home-page'),
+      buy: document.getElementById('buy-page'),
+      sell: document.getElementById('sell-page'),
+      contact: document.getElementById('contact-page'),
+'product-detail': document.getElementById('product-detail-page'),
+    };
+
+    let currentCategory = null;
+    let currentProductIndex = null;
+    let searchQuery = '';
+    let filterCondition = '';
+    let sortPrice = '';
+    let minPrice = '';
+    let maxPrice = '';
+    let globalSearchQuery = '';
+    let comments = loadComments();
+    let isDarkMode = loadDarkMode();
+    let reviews = loadReviews();
+    let currentRating = 0;
+    let reviewFilter = 'all'; // 'all' nebo 'my'
+    let filteredItems = []; // Globální proměnná pro filtrované položky
+
+    const categoryItems = loadCategoryItems();
+
+    function loadCategoryItems() {
+      const stored = localStorage.getItem('bobriakovCategoryItems');
+      try {
+        return stored ? JSON.parse(stored) : {};
+      } catch {
+        return {};
+      }
+    }
+
+    function saveCategoryItems() {
+      localStorage.setItem('bobriakovCategoryItems', JSON.stringify(categoryItems));
+    }
+
+    function loadComments() {
+      const stored = localStorage.getItem('bobriakovComments');
+      try {
+        return stored ? JSON.parse(stored) : {};
+      } catch {
+        return {};
+      }
+    }
+
+    function saveComments() {
+      localStorage.setItem('bobriakovComments', JSON.stringify(comments));
+    }
+
+    function loadDarkMode() {
+      const stored = localStorage.getItem('bobriakovDarkMode');
+      return stored === 'true';
+    }
+
+    function saveDarkMode() {
+      localStorage.setItem('bobriakovDarkMode', isDarkMode);
+    }
+
+    function loadReviews() {
+      const stored = localStorage.getItem('bobriakovReviews');
+      try {
+        return stored ? JSON.parse(stored) : [];
+      } catch {
+        return [];
+      }
+    }
+
+    function saveReviews() {
+      localStorage.setItem('bobriakovReviews', JSON.stringify(reviews));
+    }
+
+    function showPage(name) {
+      Object.values(pages).forEach(page => page.classList.add('hidden'));
+      pages[name].classList.remove('hidden');
+    }
+
+    function renderBuyItems() {
+      const container = document.getElementById('buy-products');
+      const empty = document.getElementById('buy-empty-message');
+      let items = [];
+
+      // Zobraz všechny produkty nebo filtry podle kategorie/globálního vyhledávání
+      if (globalSearchQuery) {
+        Object.keys(categoryItems).forEach(cat => {
+          const catItems = categoryItems[cat] || [];
+          items = items.concat(catItems.map((item, idx) => ({ ...item, category: cat, originalIndex: idx })));
+        });
+      } else if (currentCategory) {
+        // Zobraz produkty z vybrané kategorie
+        items = (categoryItems[currentCategory] || []).map((item, idx) => ({ ...item, category: currentCategory, originalIndex: idx }));
+      } else {
+        // Zobraz všechny produkty
+        Object.keys(categoryItems).forEach(cat => {
+          const catItems = categoryItems[cat] || [];
+          items = items.concat(catItems.map((item, idx) => ({ ...item, category: cat, originalIndex: idx })));
+        });
+      }
+
+      // Apply filters
+      if (filterCondition) {
+        items = items.filter(item => item.condition === filterCondition);
+      }
+
+      // Apply price range
+      if (minPrice !== '') {
+        items = items.filter(item => item.price >= parseInt(minPrice));
+      }
+      if (maxPrice !== '') {
+        items = items.filter(item => item.price <= parseInt(maxPrice));
+      }
+
+      // Apply search (lokální nebo globální)
+      const activeSearch = globalSearchQuery || searchQuery;
+      if (activeSearch) {
+        items = items.filter(item =>
+          item.name.toLowerCase().includes(activeSearch.toLowerCase()) ||
+          item.description.toLowerCase().includes(activeSearch.toLowerCase())
+        );
+      }
+
+      // Apply sorting
+      if (sortPrice === 'asc') {
+        items.sort((a, b) => a.price - b.price);
+      } else if (sortPrice === 'desc') {
+        items.sort((a, b) => b.price - a.price);
+      }
+
+      // Ulož filtrované a seřazené položky pro pozdější použití
+      filteredItems = items;
+
+      container.innerHTML = items.map((item, index) => {
+        const canEdit = item.contact && validateContact(item.contact); // Zjednodušená kontrola vlastnictví
+        const productId = `${item.category}-${item.originalIndex}`;
+
+        return `
+          <article class="product-card" data-product-index="${index}" data-original-index="${item.originalIndex}" data-category="${item.category}" onclick="openProductDetailCard(event, this)">
+            ${item.image ? `<img data-src="${item.image}" alt="${item.name}" loading="lazy" />` : ''}
+            <h3>${item.name}</h3>
+            <p>${item.description}</p>
+            <p class="price">${item.price} Kč</p>
+            <p class="status">Stav: ${item.condition}</p>
+            ${canEdit ? `<button class="edit-btn" data-product-id="${productId}">Upravit</button>` : ''}
+          </article>
+        `;
+      }).join('');
+
+      // Inicializovat lazy loading pro nové obrázky
+      setTimeout(initLazyLoading, 100);
+
+      empty.style.display = items.length ? 'none' : 'block';
+      empty.textContent = globalSearchQuery ? 'Žádné produkty nevyhovují vyhledávání.' : 'Zatím nejsou přidány žádné produkty.';
+    }
+
+    function renderCategoryItems() {
+      const container = document.getElementById('category-products');
+      const empty = document.getElementById('empty-message');
+      let items = currentCategory ? categoryItems[currentCategory] || [] : [];
+
+      // Apply filters
+      if (filterCondition) {
+        items = items.filter(item => item.condition === filterCondition);
+      }
+
+      // Apply search
+      if (searchQuery) {
+        items = items.filter(item =>
+          item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          item.description.toLowerCase().includes(searchQuery.toLowerCase())
+        );
+      }
+
+      // Apply sorting
+      if (sortPrice === 'asc') {
+        items.sort((a, b) => a.price - b.price);
+      } else if (sortPrice === 'desc') {
+        items.sort((a, b) => b.price - a.price);
+      }
+
+      container.innerHTML = items.map((item, index) => `
+        <article class="product-card" data-product-index="${index}">
+          ${item.image ? `<img src="${item.image}" alt="${item.name}" />` : ''}
+          <h3>${item.name}</h3>
+          <p>${item.description}</p>
+          <p class="price">${item.price} Kč</p>
+          <p class="status">Stav: ${item.condition}</p>
+        </article>
+      `).join('');
+      empty.style.display = items.length ? 'none' : 'block';
+    }
+
+    // Toast notifikace
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      toast.innerHTML = `
+        ${message}
+        <button class="close-btn" onclick="this.parentElement.remove()">×</button>
+      `;
+      container.appendChild(toast);
+
+      // Automatické odstranění po 5 sekundách
+      setTimeout(() => {
+        if (toast.parentElement) {
+          toast.remove();
+        }
+      }, 5000);
+    }
+
+    // Aktualizace statistik
+    function updateStats() {
+      let totalProducts = 0;
+      Object.values(categoryItems).forEach(cat => {
+        totalProducts += cat ? cat.length : 0;
+      });
+
+      const totalReviews = reviews ? reviews.length : 0;
+
+      const productsElem = document.getElementById('total-products');
+      const reviewsElem = document.getElementById('total-reviews');
+
+      // Animace při změně počtu produktů
+      if (productsElem.textContent !== totalProducts.toString()) {
+        productsElem.textContent = totalProducts;
+        productsElem.parentElement.classList.add('stat-updated');
+        setTimeout(() => productsElem.parentElement.classList.remove('stat-updated'), 600);
+      }
+
+      // Animace při změně počtu recenzí
+      if (reviewsElem.textContent !== totalReviews.toString()) {
+        reviewsElem.textContent = totalReviews;
+        reviewsElem.parentElement.classList.add('stat-updated');
+        setTimeout(() => reviewsElem.parentElement.classList.remove('stat-updated'), 600);
+      }
+    }
+
+    // Toggle dark mode
+    function toggleDarkMode() {
+      isDarkMode = !isDarkMode;
+      document.body.classList.toggle('dark-mode', isDarkMode);
+      document.getElementById('dark-mode-toggle').textContent = isDarkMode ? '☀️' : '🌙';
+      saveDarkMode();
+      showToast(`Přepnuto do ${isDarkMode ? 'tmavého' : 'světlého'} režimu`, 'info');
+    }
+
+    // Render komentářů
+    function renderComments() {
+      const container = document.getElementById('comments-list');
+      const productComments = comments[`${currentCategory}-${currentProductIndex}`] || [];
+
+      container.innerHTML = productComments.map(comment => `
+        <div class="comment">
+          <div class="comment-author">${comment.author || 'Anonym'}</div>
+          <div class="comment-text">${comment.text}</div>
+          <div class="comment-date">${new Date(comment.date).toLocaleString('cs-CZ')}</div>
+        </div>
+      `).join('');
+    }
+
+    // Render recenzí
+    function renderReviews() {
+      const container = document.getElementById('reviews-list');
+
+      let filteredReviews = reviews;
+      if (reviewFilter === 'my') {
+        filteredReviews = reviews.filter(review => review.author === 'Uživatel');
+      }
+
+      if (filteredReviews.length === 0) {
+        container.innerHTML = '<div class="no-reviews">Zatím nejsou žádné recenze. Buďte první!</div>';
+        return;
+      }
+
+      container.innerHTML = filteredReviews.map((review, index) => `
+        <div class="review-item" data-index="${index}">
+          <div class="review-header">
+            <span>Recenze #${filteredReviews.length - index}</span>
+            <div>
+              <span class="review-rating">${'★'.repeat(review.rating)}${'☆'.repeat(5 - review.rating)}</span>
+              <span class="review-date">${new Date(review.date).toLocaleDateString('cs-CZ')}</span>
+            </div>
+          </div>
+          <div class="review-preview">${review.text.substring(0, 100)}${review.text.length > 100 ? '...' : ''}</div>
+          <div class="review-full">${review.text}</div>
+        </div>
+      `).join('');
+
+      // Přidat event listenery pro rozbalení
+      container.querySelectorAll('.review-item').forEach(item => {
+        item.addEventListener('click', () => {
+          item.classList.toggle('expanded');
+        });
+      });
+    }
+
+    // Přidat komentář
+    function addComment() {
+      const text = document.getElementById('comment-text').value.trim();
+      if (!text) return;
+
+      const productId = `${currentCategory}-${currentProductIndex}`;
+      if (!comments[productId]) {
+        comments[productId] = [];
+      }
+
+      comments[productId].push({
+        text,
+        author: 'Uživatel', // Zjednodušeně
+        date: new Date().toISOString()
+      });
+
+      saveComments();
+      document.getElementById('comment-text').value = '';
+      renderComments();
+      showToast('Komentář přidán!', 'success');
+    }
+
+    // Přidat recenzi
+    function addReview() {
+      const text = document.getElementById('review-text').value.trim();
+      if (!text || currentRating === 0) {
+        showToast('Vyplňte text recenze a zvolte hodnocení!', 'error');
+        return;
+      }
+
+      reviews.unshift({
+        text,
+        rating: currentRating,
+        date: new Date().toISOString(),
+        author: 'Uživatel'
+      });
+
+      saveReviews();
+      document.getElementById('review-text').value = '';
+      currentRating = 0;
+      updateRatingStars();
+      renderReviews();
+      updateStats();
+      showToast('Recenze přidána!', 'success');
+    }
+
+    // Aktualizace hvězdiček hodnocení
+    function updateRatingStars() {
+      const stars = document.querySelectorAll('#rating-stars .star');
+      stars.forEach((star, index) => {
+        star.textContent = index < currentRating ? '★' : '☆';
+        star.style.color = index < currentRating ? '#ffc107' : '#ddd';
+      });
+    }
+
+    // Scroll to top funkcionalita
+    function initScrollToTop() {
+      const scrollBtn = document.getElementById('scroll-to-top');
+
+      window.addEventListener('scroll', () => {
+        if (window.pageYOffset > 300) {
+          scrollBtn.classList.add('visible');
+        } else {
+          scrollBtn.classList.remove('visible');
+        }
+      });
+
+      scrollBtn.addEventListener('click', () => {
+        window.scrollTo({
+          top: 0,
+          behavior: 'smooth'
+        });
+      });
+    }
+
+    // Lazy loading obrázků
+    function initLazyLoading() {
+      const images = document.querySelectorAll('img[data-src]');
+
+      const imageObserver = new IntersectionObserver((entries, observer) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            const img = entry.target;
+            img.classList.add('loading');
+            img.src = img.dataset.src;
+            img.onload = () => {
+              img.classList.remove('loading');
+              img.classList.add('loaded');
+            };
+            observer.unobserve(img);
+          }
+        });
+      });
+
+      images.forEach(img => imageObserver.observe(img));
+    }
+
+    // Skeleton loading pro produkty
+    function showSkeletonLoading(container, count = 6) {
+      const skeletonHTML = Array(count).fill().map(() => `
+        <article class="product-card skeleton-card">
+          <div class="skeleton" style="width: 100%; height: 180px; border-radius: 18px;"></div>
+          <div class="skeleton" style="width: 80%; height: 20px; margin: 14px 0 10px;"></div>
+          <div class="skeleton" style="width: 100%; height: 16px; margin-bottom: 8px;"></div>
+          <div class="skeleton" style="width: 60%; height: 16px; margin-bottom: 8px;"></div>
+          <div class="skeleton" style="width: 40%; height: 16px;"></div>
+        </article>
+      `).join('');
+
+      container.innerHTML = skeletonHTML;
+    }
+
+    function renderProductDetail() {
+      const container = document.getElementById('product-detail-content');
+      const items = categoryItems[currentCategory] || [];
+      const item = items[currentProductIndex];
+      if (!item) return;
+
+      container.innerHTML = `
+        ${item.image ? `<img src="${item.image}" alt="${item.name}" />` : ''}
+        <h2>${item.name}</h2>
+        <p class="price">${item.price} Kč</p>
+        <p>${item.description}</p>
+        <p class="status">Stav: ${item.condition}</p>
+        <button class="contact-btn" onclick="contactSeller('${item.contact}')">Mám zájem</button>
+        <button class="delete-btn" onclick="deleteProduct()">Smazat produkt</button>
+      `;
+
+      renderComments();
+    }
+
+    function contactSeller(contact) {
+      currentContact = contact;
+      currentItem = categoryItems[currentCategory] ? categoryItems[currentCategory][currentProductIndex] : null;
+      showPremiumModal();
+    }
+
+    function openProductDetailCard(event, card) {
+      if (event.target.closest('.edit-btn') || event.target.closest('.delete-btn') || event.target.closest('.contact-btn')) {
+        return;
+      }
+      event.stopPropagation();
+      currentCategory = card.dataset.category;
+      currentProductIndex = parseInt(card.dataset.originalIndex, 10);
+      if (!Number.isNaN(currentProductIndex)) {
+        renderProductDetail();
+        showPage('product-detail');
+      }
+    }
+
+    function showPremiumModal() {
+      const modal = document.getElementById('premiumModal');
+      modal.style.display = 'block';
+      document.body.style.overflow = 'hidden'; // Prevent background scrolling
+      showToast('Premium nabídka aktivována!', 'success');
+      
+      // Reset modal state
+      document.getElementById('contactSection').style.display = 'none';
+      document.getElementById('codeSection').style.display = 'none';
+      document.getElementById('discountSection').style.display = 'none';
+      document.querySelector('.premium-options').style.display = 'flex';
+      
+      // Close modal when clicking outside
+      modal.onclick = function(event) {
+        if (event.target === modal) {
+          closePremiumModal();
+        }
+      };
+    }
+
+    function closePremiumModal() {
+      document.getElementById('premiumModal').style.display = 'none';
+      document.body.style.overflow = 'auto'; // Restore scrolling
+    }
+
+    function showContact() {
+      document.querySelector('.premium-options').style.display = 'none';
+      document.getElementById('contactSection').style.display = 'block';
+      
+      const contactInfo = document.getElementById('contactInfo');
+      if (currentContact.includes('@')) {
+        contactInfo.innerHTML = `<div class="contact-item">📧 <strong>Email:</strong> <a href="mailto:${currentContact}">${currentContact}</a></div>`;
+      } else {
+        contactInfo.innerHTML = `<div class="contact-item">📞 <strong>Telefon:</strong> <a href="tel:${currentContact}">${currentContact}</a></div>`;
+      }
+    }
+
+    function hideContact() {
+      document.getElementById('contactSection').style.display = 'none';
+      document.querySelector('.premium-options').style.display = 'flex';
+    }
+
+    function showPremiumCode() {
+      document.querySelector('.premium-options').style.display = 'none';
+      document.getElementById('codeSection').style.display = 'block';
+      document.getElementById('premiumCodeInput').focus();
+    }
+
+    function hideCode() {
+      document.getElementById('codeSection').style.display = 'none';
+      document.querySelector('.premium-options').style.display = 'flex';
+      document.getElementById('premiumCodeInput').value = '';
+    }
+
+    function verifyCode() {
+      const inputCode = document.getElementById('premiumCodeInput').value;
+      if (inputCode === '1234') {
+        document.getElementById('codeSection').style.display = 'none';
+        document.getElementById('discountSection').style.display = 'block';
+        
+        // Calculate discount
+        if (currentItem && currentItem.price) {
+          const originalPrice = currentItem.price;
+          const discountAmount = Math.round(originalPrice * 0.2);
+          const finalPrice = originalPrice - discountAmount;
+          
+          document.getElementById('originalPrice').textContent = originalPrice + ' Kč';
+          document.getElementById('discountAmount').textContent = discountAmount + ' Kč';
+          document.getElementById('finalPrice').textContent = finalPrice + ' Kč';
+        }
+        
+        // Set contact info
+        const premiumContactInfo = document.getElementById('premiumContactInfo');
+        if (currentContact.includes('@')) {
+          premiumContactInfo.innerHTML = `<div class="contact-item">📧 <strong>Email:</strong> <a href="mailto:${currentContact}">${currentContact}</a></div>`;
+        } else {
+          premiumContactInfo.innerHTML = `<div class="contact-item">📞 <strong>Telefon:</strong> <a href="tel:${currentContact}">${currentContact}</a></div>`;
+        }
+        
+        showToast('Kód ověřen! Získáváte 20% slevu!', 'success');
+      } else {
+        showToast('Neplatný kód. Zkuste to znovu.', 'error');
+        document.getElementById('premiumCodeInput').value = '';
+        document.getElementById('premiumCodeInput').focus();
+      }
+    }
+
+    function copyDiscountCode() {
+      navigator.clipboard.writeText('SLEVA20').then(() => {
+        showToast('Kód slevy zkopírován!', 'success');
+      });
+    }
+
+    function contactWithDiscount() {
+      if (currentContact.includes('@')) {
+        window.location.href = `mailto:${currentContact}?subject=Premium%20sleva%2020%&body=Dobrý%20den,%20mám%20zájem%20o%20produkt%20s%20premium%20slevou%2020%.%20Kód%20slevy:%20SLEVA20`;
+      } else {
+        window.location.href = `tel:${currentContact}`;
+        showToast('Zavolejte a uveďte kód slevy: SLEVA20', 'info');
+      }
+      closePremiumModal();
+    }
+
+    function deleteProduct() {
+      if (confirm('Opravdu chcete smazat tento produkt?')) {
+        categoryItems[currentCategory].splice(currentProductIndex, 1);
+        saveCategoryItems();
+        showPage('buy');
+        renderBuyItems();
+      }
+    }
+
+    function editProduct(productId) {
+      const [category, index] = productId.split('-');
+      const item = categoryItems[category]?.[parseInt(index)];
+      if (!item) return;
+
+      // Přejít na sell-page a naplnit formulář
+      document.getElementById('product-name').value = item.name;
+      document.getElementById('product-description').value = item.description;
+      document.getElementById('product-price').value = item.price;
+      document.getElementById('product-condition').value = item.condition;
+      document.getElementById('product-contact').value = item.contact;
+
+      // Změnit tlačítko na "Aktualizovat"
+      const submitBtn = document.querySelector('#add-product-form button[type="submit"]');
+      submitBtn.textContent = 'Aktualizovat produkt';
+      submitBtn.dataset.editMode = 'true';
+      submitBtn.dataset.editId = productId;
+
+      showPage('sell');
+      showToast('Formulář naplněn pro úpravu produktu', 'info');
+    }
+
+    function validateContact(contact) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      const phoneRegex = /^[\+]?[0-9\s\-\(\)]{9,}$/;
+      return emailRegex.test(contact) || phoneRegex.test(contact);
+    }
+
+    document.querySelectorAll('[data-page]').forEach(button => {
+      button.addEventListener('click', () => {
+        const page = button.dataset.page;
+        if (page === 'buy') {
+          // Reset filtry při přechodu na buy-page
+          currentCategory = null;
+          searchQuery = '';
+          filterCondition = '';
+          sortPrice = '';
+          renderBuyItems();
+        } else if (page === 'contact') {
+          renderReviews();
+        }
+        showPage(page);
+      });
+    });
+
+    document.getElementById('buy-products').addEventListener('click', event => {
+      const card = event.target.closest('.product-card');
+      if (!card) return;
+      
+      // Zabránit kliknutí na tlačítka uvnitř karty
+      if (event.target.closest('.contact-btn') || event.target.closest('.delete-btn') || event.target.closest('.edit-btn')) {
+        return;
+      }
+      
+      currentCategory = card.dataset.category;
+      currentProductIndex = parseInt(card.dataset.originalIndex, 10);
+      
+      if (!Number.isNaN(currentProductIndex)) {
+        renderProductDetail();
+        showPage('product-detail');
+      }
+    });
+
+    document.getElementById('search-input').addEventListener('input', event => {
+      searchQuery = event.target.value.trim();
+      renderBuyItems();
+    });
+
+    document.getElementById('apply-filters').addEventListener('click', () => {
+      filterCondition = document.getElementById('filter-condition').value;
+      sortPrice = document.getElementById('sort-price').value;
+      renderBuyItems();
+    });
+
+    const addProductForm = document.getElementById('add-product-form');
+    addProductForm.addEventListener('submit', async event => {
+      event.preventDefault();
+      const category = 'ostatni';
+      const name = document.getElementById('product-name').value.trim();
+      const description = document.getElementById('product-description').value.trim();
+      const price = parseInt(document.getElementById('product-price').value);
+      const condition = document.getElementById('product-condition').value;
+      const contact = document.getElementById('product-contact').value.trim();
+      const imageFile = document.getElementById('product-image').files[0];
+
+      if (!name || !description || !price || !condition || !contact) {
+        showToast('Vyplňte všechna pole!', 'error');
+        return;
+      }
+
+      if (!validateContact(contact)) {
+        showToast('Zadejte platný email nebo telefonní číslo!', 'error');
+        return;
+      }
+
+      const button = addProductForm.querySelector('button');
+      const originalText = button.textContent;
+      button.innerHTML = `${originalText}<div class="loading"></div>`;
+      button.disabled = true;
+
+      let imageData = '';
+      if (imageFile) {
+        if (imageFile.size > 5 * 1024 * 1024) { // 5MB limit
+          showToast('Obrázek je příliš velký (max 5MB)!', 'error');
+          button.innerHTML = originalText;
+          button.disabled = false;
+          return;
+        }
+        imageData = await fileToBase64(imageFile);
+      }
+
+      // Kontrola edit módu
+      const isEditMode = button.dataset.editMode === 'true';
+      const editId = button.dataset.editId;
+
+      if (isEditMode && editId) {
+        // Režim úpravy
+        const [oldCategory, index] = editId.split('-');
+        if (categoryItems[oldCategory]?.[parseInt(index)]) {
+          // Aktualizovat existující produkt bez změny kategorie
+          categoryItems[oldCategory][parseInt(index)] = {
+            ...categoryItems[oldCategory][parseInt(index)],
+            name, description, price, condition, contact,
+            ...(imageData && { image: imageData })
+          };
+          saveCategoryItems();
+          showToast('Produkt byl aktualizován!', 'success');
+        }
+      } else {
+        // Režim přidání
+        categoryItems[category] = categoryItems[category] || [];
+        categoryItems[category].push({ name, description, price, condition, contact, image: imageData });
+        saveCategoryItems();
+        showToast('Produkt byl přidán!', 'success');
+      }
+
+      button.innerHTML = originalText;
+      button.disabled = false;
+      button.textContent = 'Přidat produkt';
+      delete button.dataset.editMode;
+      delete button.dataset.editId;
+
+      const successMsg = document.getElementById('success-message');
+      successMsg.style.display = 'block';
+      setTimeout(() => successMsg.style.display = 'none', 3000);
+
+      renderBuyItems();
+      addProductForm.reset();
+    });
+
+    function fileToBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    // Inicializace
+    document.addEventListener('DOMContentLoaded', () => {
+      // Registrace service workeru pro PWA
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js')
+          .then(registration => {
+            console.log('Service Worker registrován:', registration);
+          })
+          .catch(error => {
+            console.log('Registrace Service Workeru selhala:', error);
+          });
+      }
+
+      // Nastavit dark mode
+      document.body.classList.toggle('dark-mode', isDarkMode);
+      document.getElementById('dark-mode-toggle').textContent = isDarkMode ? '☀️' : '🌙';
+
+      // Aktualizovat statistiky
+      updateStats();
+
+      // Inicializovat nákupní stránku
+      renderBuyItems();
+
+      // Inicializovat funkcionality
+      initScrollToTop();
+      initLazyLoading();
+
+      // Event listenery pro nové funkce
+      document.getElementById('dark-mode-toggle').addEventListener('click', toggleDarkMode);
+      document.getElementById('global-search-input').addEventListener('input', event => {
+        globalSearchQuery = event.target.value.trim();
+        renderBuyItems();
+      });
+      document.getElementById('min-price').addEventListener('input', event => {
+        minPrice = event.target.value;
+        renderBuyItems();
+      });
+      document.getElementById('max-price').addEventListener('input', event => {
+        maxPrice = event.target.value;
+        renderBuyItems();
+      });
+      document.getElementById('add-comment-btn').addEventListener('click', addComment);
+      document.getElementById('add-review-btn').addEventListener('click', addReview);
+
+      // Event listenery pro hvězdičky hodnocení
+      document.querySelectorAll('#rating-stars .star').forEach(star => {
+        star.addEventListener('click', () => {
+          currentRating = parseInt(star.dataset.rating);
+          updateRatingStars();
+        });
+      });
+
+      // Aktualizovat statistiky při změnách
+      const originalSaveCategoryItems = saveCategoryItems;
+      saveCategoryItems = function() {
+        originalSaveCategoryItems();
+        updateStats();
+      };
+
+      const originalSaveReviews = saveReviews;
+      saveReviews = function() {
+        originalSaveReviews();
+        updateStats();
+      };
+    });
+  </script>
+
+  <!-- Premium Modal -->
+  <div id="premiumModal" class="modal">
+    <div class="modal-content premium-modal">
+      <div class="modal-header">
+        <h2>💎 Premium Nabídka</h2>
+        <span class="close-modal" onclick="closePremiumModal()">&times;</span>
+      </div>
+      <div class="modal-body">
+        <div class="premium-content">
+          <div class="premium-icon">⭐</div>
+          <h3>Máte premium účet?</h3>
+          <p>Získejte 20% slevu s naším premium programem!</p>
+          
+          <div class="premium-options">
+            <button class="btn btn-secondary" onclick="showContact()">Nemám premium</button>
+            <button class="btn btn-primary" onclick="showPremiumCode()">Mám premium</button>
+          </div>
+          
+          <div id="contactSection" class="contact-section" style="display: none;">
+            <h4>Kontaktujte prodávajícího:</h4>
+            <div class="contact-info" id="contactInfo"></div>
+            <button class="btn btn-outline" onclick="hideContact()">Zpět</button>
+          </div>
+          
+          <div id="codeSection" class="code-section" style="display: none;">
+            <p>Zadejte váš premium kód:</p>
+            <input type="text" id="premiumCodeInput" placeholder="Zadejte kód" maxlength="4">
+            <button class="btn btn-primary" onclick="verifyCode()">Ověřit kód</button>
+            <button class="btn btn-outline" onclick="hideCode()">Zpět</button>
+          </div>
+          
+          <div id="discountSection" class="discount-section" style="display: none;">
+            <div class="discount-success">
+              <div class="success-icon">✅</div>
+              <h4>Úspěšně ověřeno!</h4>
+              <div id="discountDetails">
+                <p class="discount-text">Získáváte <strong>20% slevu</strong>!</p>
+                <div class="price-comparison">
+                  <div class="original-price">Původní cena: <span id="originalPrice">0 Kč</span></div>
+                  <div class="discount-amount">Sleva: <span id="discountAmount">0 Kč</span></div>
+                  <div class="final-price">Cena po slevě: <span id="finalPrice">0 Kč</span></div>
+                </div>
+                <div class="premium-contact">
+                  <h5>Kontaktujte prodávajícího:</h5>
+                  <div class="contact-info" id="premiumContactInfo"></div>
+                </div>
+              </div>
+              <button class="btn btn-primary" onclick="copyDiscountCode()">Kopírovat kód slevy</button>
+              <button class="btn btn-secondary" onclick="contactWithDiscount()">Kontaktovat slevou</button>
+            </div>
+          </div>
+          
+          <p class="premium-note">* Premium účet získáte registrací na našich stránkách</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>
